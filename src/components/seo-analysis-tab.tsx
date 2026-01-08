@@ -40,6 +40,11 @@ export function SeoAnalysisTab() {
   });
   const [error, setError] = useState<string | null>(null);
 
+  const handleAnalyzePage = (page: Page) => {
+    // TODO: Implement page analysis functionality
+    console.log("Analyzing page:", page);
+  };
+
   const fetchCollections = async () => {
     try {
       setLoading((prev) => ({ ...prev, collections: true }));
@@ -195,36 +200,54 @@ export function SeoAnalysisTab() {
           )}
         </div>
 
-        {/* Sites Dropdown */}
+        {/* Sites List */}
         {selectedCollection && (
           <div>
-            <label
-              htmlFor="site-select"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Site
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Sites ({sites.length})
             </label>
-            <select
-              id="site-select"
-              value={selectedSite}
-              onChange={(e) => setSelectedSite(e.target.value)}
-              disabled={loading.sites || sites.length === 0}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-            >
-              <option value="">Select a site...</option>
-              {sites.map((site) => (
-                <option key={site.id || site.name} value={site.name || site.id}>
-                  {site.name || site.id}
-                </option>
-              ))}
-            </select>
-            {loading.sites && (
-              <p className="text-xs text-gray-500 mt-1">Loading sites...</p>
-            )}
-            {!loading.sites && sites.length === 0 && selectedCollection && (
-              <p className="text-xs text-gray-500 mt-1">
-                No sites found for this collection
-              </p>
+            {loading.sites ? (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                <span>Loading sites...</span>
+              </div>
+            ) : sites.length === 0 ? (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                <p className="text-gray-600 text-sm">
+                  No sites found for this collection
+                </p>
+              </div>
+            ) : (
+              <div className="border border-gray-200 rounded-lg max-h-96 overflow-y-auto">
+                <ul className="divide-y divide-gray-200">
+                  {sites.map((site) => {
+                    const siteId = site.id || site.name;
+                    const isSelected = selectedSite === (site.name || site.id);
+                    return (
+                      <li
+                        key={siteId}
+                        onClick={() => setSelectedSite(site.name || site.id || "")}
+                        className={`px-4 py-3 cursor-pointer transition-colors ${
+                          isSelected
+                            ? "bg-blue-50 border-l-4 border-l-blue-500"
+                            : "hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm">
+                            {site.name || site.id}
+                          </span>
+                          {site.id && site.id !== site.name && (
+                            <span className="text-xs text-gray-500 mt-1">
+                              ID: {site.id}
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             )}
           </div>
         )}
@@ -254,13 +277,21 @@ export function SeoAnalysisTab() {
                       key={page.id}
                       className="px-4 py-3 hover:bg-gray-50 transition-colors"
                     >
-                      <div className="flex flex-col">
-                        <span className="font-medium text-sm">
-                          {page.path}
-                        </span>
-                        <span className="text-xs text-gray-500 mt-1">
-                          ID: {page.id}
-                        </span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col flex-1">
+                          <span className="font-medium text-sm">
+                            {page.path || page.id}
+                          </span>
+                          <span className="text-xs text-gray-500 mt-1">
+                            ID: {page.id}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleAnalyzePage(page)}
+                          className="ml-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                        >
+                          Analyze page
+                        </button>
                       </div>
                     </li>
                   ))}
