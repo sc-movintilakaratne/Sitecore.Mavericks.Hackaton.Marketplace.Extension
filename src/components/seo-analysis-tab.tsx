@@ -42,6 +42,8 @@ export function SeoAnalysisTab() {
   const [selectedPageForReport, setSelectedPageForReport] = useState<Page | null>(null);
   const [selectedPageForHeadSeo, setSelectedPageForHeadSeo] = useState<Page | null>(null);
   const [headSeoScores, setHeadSeoScores] = useState<Record<string, HeadSeoScoreResponse>>({});
+  const [expandedHeadSeoItems, setExpandedHeadSeoItems] = useState<Record<string, Set<string>>>({});
+  const [expandedSeoItems, setExpandedSeoItems] = useState<Record<string, Set<string>>>({});
   const [loading, setLoading] = useState({
     collections: false,
     sites: false,
@@ -241,6 +243,8 @@ export function SeoAnalysisTab() {
       setSearchQuery(""); // Reset search when site changes
       setSelectedPageForReport(null); // Clear report when site changes
       setSelectedPageForHeadSeo(null); // Clear head SEO report when site changes
+      setExpandedHeadSeoItems({}); // Clear expanded state
+      setExpandedSeoItems({}); // Clear expanded state
       return;
     }
 
@@ -456,207 +460,399 @@ export function SeoAnalysisTab() {
 
         {/* Head SEO Report Section */}
         {selectedPageForHeadSeo && headSeoScores[selectedPageForHeadSeo.id] && (
-          <div className="mt-6 border border-gray-200 rounded-lg p-6 bg-white">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-semibold text-gray-800">Head SEO Report</h4>
+          <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            {/* Header */}
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h4 className="text-lg font-semibold text-gray-900">Head SEO</h4>
               <button
                 onClick={() => setSelectedPageForHeadSeo(null)}
-                className="text-gray-500 hover:text-gray-700 text-sm"
+                className="text-gray-500 hover:text-gray-700 text-sm font-medium"
               >
                 Close
               </button>
             </div>
-            
-            <div className="mb-4 pb-4 border-b border-gray-200">
-              <p className="text-sm text-gray-600 mb-2">
-                <span className="font-medium">Page:</span> {selectedPageForHeadSeo.path || selectedPageForHeadSeo.id}
-              </p>
-              <p className="text-xs text-gray-500">
-                <span className="font-medium">ID:</span> {selectedPageForHeadSeo.id}
-              </p>
-            </div>
 
-            {(() => {
-              const headSeo = headSeoScores[selectedPageForHeadSeo.id];
-              const getScoreColor = (score: number) => {
-                if (score === 100) return "text-green-600 bg-green-50 border-green-200";
-                if (score >= 50) return "text-yellow-600 bg-yellow-50 border-yellow-200";
-                return "text-red-600 bg-red-50 border-red-200";
-              };
+            <div className="p-6">
+              {/* Page Info */}
+              <div className="mb-6 pb-4 border-b border-gray-200">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Page:</span> {selectedPageForHeadSeo.path || selectedPageForHeadSeo.id}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  <span className="font-medium">ID:</span> {selectedPageForHeadSeo.id}
+                </p>
+              </div>
 
-              const headSeoItems = [
-                { key: 'title', label: 'Title', data: headSeo.title },
-                { key: 'metaDescription', label: 'Meta Description', data: headSeo.metaDescription },
-                { key: 'metaKeywords', label: 'Meta Keywords', data: headSeo.metaKeywords },
-                { key: 'ogTitle', label: 'OG Title', data: headSeo.ogTitle },
-                { key: 'ogDescription', label: 'OG Description', data: headSeo.ogDescription },
-                { key: 'ogImage', label: 'OG Image', data: headSeo.ogImage },
-                { key: 'ogUrl', label: 'OG URL', data: headSeo.ogUrl },
-              ];
+              {(() => {
+                const headSeo = headSeoScores[selectedPageForHeadSeo.id];
+                
+                // Calculate average score
+                const scores = [
+                  headSeo.title.score,
+                  headSeo.metaDescription.score,
+                  headSeo.metaKeywords.score,
+                  headSeo.ogTitle.score,
+                  headSeo.ogDescription.score,
+                  headSeo.ogImage.score,
+                  headSeo.ogUrl.score,
+                ];
+                const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
 
-              return (
-                <div className="space-y-3">
-                  {headSeoItems.map((item) => (
-                    <div
-                      key={item.key}
-                      className={`p-4 rounded-lg border ${getScoreColor(item.data.score)}`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <span className="text-sm font-semibold text-gray-800">{item.label}</span>
-                        <span className={`px-3 py-1 rounded text-xs font-bold ${getScoreColor(item.data.score)}`}>
-                          {item.data.score}/100
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-700 mb-2">{item.data.message}</p>
-                      {item.data.value && (
-                        <div className="mt-2 p-2 bg-white bg-opacity-50 rounded border border-gray-200">
-                          <p className="text-xs font-medium text-gray-600 mb-1">Value:</p>
-                          <p className="text-xs text-gray-800 break-words">{item.data.value}</p>
+                const getScoreColor = (score: number) => {
+                  if (score >= 90) return { bg: "bg-green-500", text: "text-green-600", border: "border-green-200", bgLight: "bg-green-50" };
+                  if (score >= 50) return { bg: "bg-orange-500", text: "text-orange-600", border: "border-orange-200", bgLight: "bg-orange-50" };
+                  return { bg: "bg-red-500", text: "text-red-600", border: "border-red-200", bgLight: "bg-red-50" };
+                };
+
+                const scoreColor = getScoreColor(avgScore);
+                const circumference = 2 * Math.PI * 45; // radius = 45
+                const offset = circumference - (avgScore / 100) * circumference;
+
+                const headSeoItems = [
+                  { key: 'title', label: 'Title', data: headSeo.title },
+                  { key: 'metaDescription', label: 'Meta Description', data: headSeo.metaDescription },
+                  { key: 'metaKeywords', label: 'Meta Keywords', data: headSeo.metaKeywords },
+                  { key: 'ogTitle', label: 'OG Title', data: headSeo.ogTitle },
+                  { key: 'ogDescription', label: 'OG Description', data: headSeo.ogDescription },
+                  { key: 'ogImage', label: 'OG Image', data: headSeo.ogImage },
+                  { key: 'ogUrl', label: 'OG URL', data: headSeo.ogUrl },
+                ];
+
+                return (
+                  <>
+                    {/* Score Gauge */}
+                    <div className="flex justify-center mb-8">
+                      <div className="relative w-32 h-32">
+                        <svg className="transform -rotate-90 w-32 h-32">
+                          <circle
+                            cx="64"
+                            cy="64"
+                            r="45"
+                            stroke="currentColor"
+                            strokeWidth="8"
+                            fill="none"
+                            className="text-gray-200"
+                          />
+                          <circle
+                            cx="64"
+                            cy="64"
+                            r="45"
+                            stroke="currentColor"
+                            strokeWidth="8"
+                            fill="none"
+                            strokeDasharray={circumference}
+                            strokeDashoffset={offset}
+                            strokeLinecap="round"
+                            className={`${scoreColor.bg} transition-all duration-500`}
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center">
+                            <div className={`text-3xl font-bold ${scoreColor.text}`}>{avgScore}</div>
+                          </div>
                         </div>
-                      )}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              );
-            })()}
+
+                    {/* Metrics List */}
+                    <div className="space-y-2">
+                      {headSeoItems.map((item) => {
+                        const itemColor = getScoreColor(item.data.score);
+                        const itemCircumference = 2 * Math.PI * 12;
+                        const itemOffset = itemCircumference - (item.data.score / 100) * itemCircumference;
+                        const expandedSet = expandedHeadSeoItems[selectedPageForHeadSeo.id] || new Set();
+                        const isExpanded = expandedSet.has(item.key);
+
+                        const toggleExpanded = () => {
+                          setExpandedHeadSeoItems(prev => {
+                            const pageId = selectedPageForHeadSeo.id;
+                            const currentSet = prev[pageId] || new Set();
+                            const newSet = new Set(currentSet);
+                            if (isExpanded) {
+                              newSet.delete(item.key);
+                            } else {
+                              newSet.add(item.key);
+                            }
+                            return { ...prev, [pageId]: newSet };
+                          });
+                        };
+
+                        return (
+                          <div
+                            key={item.key}
+                            className={`border rounded-lg ${itemColor.border} ${itemColor.bgLight} transition-colors`}
+                          >
+                            <button
+                              onClick={toggleExpanded}
+                              className="w-full px-4 py-3 flex items-center justify-between hover:bg-opacity-50 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 flex-1">
+                                <div className="relative w-8 h-8 flex-shrink-0">
+                                  <svg className="transform -rotate-90 w-8 h-8">
+                                    <circle
+                                      cx="16"
+                                      cy="16"
+                                      r="12"
+                                      stroke="currentColor"
+                                      strokeWidth="3"
+                                      fill="none"
+                                      className="text-gray-200"
+                                    />
+                                    <circle
+                                      cx="16"
+                                      cy="16"
+                                      r="12"
+                                      stroke="currentColor"
+                                      strokeWidth="3"
+                                      fill="none"
+                                      strokeDasharray={itemCircumference}
+                                      strokeDashoffset={itemOffset}
+                                      strokeLinecap="round"
+                                      className={itemColor.bg}
+                                    />
+                                  </svg>
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className={`text-xs font-bold ${itemColor.text}`}>
+                                      {item.data.score}
+                                    </span>
+                                  </div>
+                                </div>
+                                <span className="text-sm font-medium text-gray-900">{item.label}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className={`text-xs font-semibold ${itemColor.text}`}>
+                                  {item.data.score}/100
+                                </span>
+                                <svg
+                                  className={`w-5 h-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </button>
+                            {isExpanded && (
+                              <div className="px-4 pb-4 pt-2 border-t border-gray-200">
+                                <p className="text-xs text-gray-600 mb-3 mt-2">{item.data.message}</p>
+                                {item.data.value && (
+                                  <div className="p-3 bg-white rounded border border-gray-200">
+                                    <p className="text-xs font-medium text-gray-700 mb-1">Value:</p>
+                                    <p className="text-xs text-gray-800 break-words">{item.data.value}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
           </div>
         )}
 
         {/* SEO Report Section */}
         {selectedPageForReport && seoScores[selectedPageForReport.id] && (
-          <div className="mt-6 border border-gray-200 rounded-lg p-6 bg-white">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-semibold text-gray-800">SEO Report</h4>
+          <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            {/* Header */}
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h4 className="text-lg font-semibold text-gray-900">SEO</h4>
               <button
                 onClick={() => setSelectedPageForReport(null)}
-                className="text-gray-500 hover:text-gray-700 text-sm"
+                className="text-gray-500 hover:text-gray-700 text-sm font-medium"
               >
                 Close
               </button>
             </div>
-            
-            <div className="mb-4 pb-4 border-b border-gray-200">
-              <p className="text-sm text-gray-600 mb-2">
-                <span className="font-medium">Page:</span> {selectedPageForReport.path || selectedPageForReport.id}
-              </p>
-              <p className="text-xs text-gray-500">
-                <span className="font-medium">ID:</span> {selectedPageForReport.id}
-              </p>
-            </div>
 
-            {(() => {
-              const seoScore = seoScores[selectedPageForReport.id];
-              const getScoreColor = (score: number) => {
-                if (score >= 80) return "text-green-600 bg-green-50 border-green-200";
-                if (score >= 60) return "text-yellow-600 bg-yellow-50 border-yellow-200";
-                return "text-red-600 bg-red-50 border-red-200";
-              };
-              const getGradeColor = (grade: string) => {
-                if (grade === "A") return "text-green-700 bg-green-100 border-green-300";
-                if (grade === "B") return "text-blue-700 bg-blue-100 border-blue-300";
-                if (grade === "C") return "text-yellow-700 bg-yellow-100 border-yellow-300";
-                if (grade === "D") return "text-orange-700 bg-orange-100 border-orange-300";
-                return "text-red-700 bg-red-100 border-red-300";
-              };
+            <div className="p-6">
+              {/* Page Info */}
+              <div className="mb-6 pb-4 border-b border-gray-200">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Page:</span> {selectedPageForReport.path || selectedPageForReport.id}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  <span className="font-medium">ID:</span> {selectedPageForReport.id}
+                </p>
+              </div>
 
-              return (
-                <>
-                  {/* Overall Score */}
-                  <div className="mb-6">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className={`px-6 py-4 rounded-lg border-2 ${getScoreColor(seoScore.score)}`}>
-                        <div className="text-3xl font-bold">{seoScore.score}</div>
-                        <div className="text-xs font-medium mt-1">Score / 100</div>
-                      </div>
-                      {seoScore.grade && (
-                        <div className={`px-6 py-4 rounded-lg border-2 ${getGradeColor(seoScore.grade)}`}>
-                          <div className="text-3xl font-bold">{seoScore.grade}</div>
-                          <div className="text-xs font-medium mt-1">Grade</div>
+              {(() => {
+                const seoScore = seoScores[selectedPageForReport.id];
+                
+                const getScoreColor = (score: number) => {
+                  if (score >= 90) return { bg: "bg-green-500", text: "text-green-600", border: "border-green-200", bgLight: "bg-green-50" };
+                  if (score >= 50) return { bg: "bg-orange-500", text: "text-orange-600", border: "border-orange-200", bgLight: "bg-orange-50" };
+                  return { bg: "bg-red-500", text: "text-red-600", border: "border-red-200", bgLight: "bg-red-50" };
+                };
+
+                const scoreColor = getScoreColor(seoScore.score);
+                const circumference = 2 * Math.PI * 45; // radius = 45
+                const offset = circumference - (seoScore.score / 100) * circumference;
+
+                const details = seoScore.details || {};
+                const detailItems = [
+                  { key: 'title', label: 'Title Tag', data: details.title, maxScore: 15 },
+                  { key: 'metaDescription', label: 'Meta Description', data: details.metaDescription, maxScore: 15 },
+                  { key: 'headings', label: 'Headings', data: details.headings, maxScore: 20 },
+                  { key: 'images', label: 'Images', data: details.images, maxScore: 15 },
+                  { key: 'links', label: 'Links', data: details.links, maxScore: 10 },
+                  { key: 'content', label: 'Content', data: details.content, maxScore: 15 },
+                ].filter(item => item.data);
+
+                return (
+                  <>
+                    {/* Score Gauge */}
+                    <div className="flex justify-center mb-8">
+                      <div className="relative w-32 h-32">
+                        <svg className="transform -rotate-90 w-32 h-32">
+                          <circle
+                            cx="64"
+                            cy="64"
+                            r="45"
+                            stroke="currentColor"
+                            strokeWidth="8"
+                            fill="none"
+                            className="text-gray-200"
+                          />
+                          <circle
+                            cx="64"
+                            cy="64"
+                            r="45"
+                            stroke="currentColor"
+                            strokeWidth="8"
+                            fill="none"
+                            strokeDasharray={circumference}
+                            strokeDashoffset={offset}
+                            strokeLinecap="round"
+                            className={`${scoreColor.bg} transition-all duration-500`}
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center">
+                            <div className={`text-3xl font-bold ${scoreColor.text}`}>{seoScore.score}</div>
+                            {seoScore.grade && (
+                              <div className={`text-sm font-semibold ${scoreColor.text} mt-1`}>{seoScore.grade}</div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Details */}
-                  {seoScore.details && (
-                    <div className="mb-6">
-                      <h5 className="text-sm font-semibold text-gray-700 mb-3">Analysis Details</h5>
-                      <div className="space-y-3">
-                        {seoScore.details.title && (
-                          <div className="flex items-start justify-between p-3 bg-gray-50 rounded-md">
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-gray-700">Title Tag</span>
-                              <p className="text-xs text-gray-600 mt-1">{seoScore.details.title.message}</p>
-                            </div>
-                            <span className="text-sm font-semibold text-gray-800">{seoScore.details.title.score}/15</span>
-                          </div>
-                        )}
-                        {seoScore.details.metaDescription && (
-                          <div className="flex items-start justify-between p-3 bg-gray-50 rounded-md">
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-gray-700">Meta Description</span>
-                              <p className="text-xs text-gray-600 mt-1">{seoScore.details.metaDescription.message}</p>
-                            </div>
-                            <span className="text-sm font-semibold text-gray-800">{seoScore.details.metaDescription.score}/15</span>
-                          </div>
-                        )}
-                        {seoScore.details.headings && (
-                          <div className="flex items-start justify-between p-3 bg-gray-50 rounded-md">
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-gray-700">Headings</span>
-                              <p className="text-xs text-gray-600 mt-1">{seoScore.details.headings.message}</p>
-                            </div>
-                            <span className="text-sm font-semibold text-gray-800">{seoScore.details.headings.score}/20</span>
-                          </div>
-                        )}
-                        {seoScore.details.images && (
-                          <div className="flex items-start justify-between p-3 bg-gray-50 rounded-md">
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-gray-700">Images</span>
-                              <p className="text-xs text-gray-600 mt-1">{seoScore.details.images.message}</p>
-                            </div>
-                            <span className="text-sm font-semibold text-gray-800">{seoScore.details.images.score}/15</span>
-                          </div>
-                        )}
-                        {seoScore.details.links && (
-                          <div className="flex items-start justify-between p-3 bg-gray-50 rounded-md">
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-gray-700">Links</span>
-                              <p className="text-xs text-gray-600 mt-1">{seoScore.details.links.message}</p>
-                            </div>
-                            <span className="text-sm font-semibold text-gray-800">{seoScore.details.links.score}/10</span>
-                          </div>
-                        )}
-                        {seoScore.details.content && (
-                          <div className="flex items-start justify-between p-3 bg-gray-50 rounded-md">
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-gray-700">Content</span>
-                              <p className="text-xs text-gray-600 mt-1">{seoScore.details.content.message}</p>
-                            </div>
-                            <span className="text-sm font-semibold text-gray-800">{seoScore.details.content.score}/15</span>
-                          </div>
-                        )}
                       </div>
                     </div>
-                  )}
 
-                  {/* Recommendations */}
-                  {seoScore.recommendations && seoScore.recommendations.length > 0 && (
-                    <div>
-                      <h5 className="text-sm font-semibold text-gray-700 mb-3">Recommendations</h5>
-                      <ul className="space-y-2">
-                        {seoScore.recommendations.map((rec, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
-                            <span className="text-blue-600 mt-1">•</span>
-                            <span>{rec}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </>
-              );
-            })()}
+                    {/* Metrics List */}
+                    {detailItems.length > 0 && (
+                      <div className="space-y-2 mb-6">
+                        {detailItems.map((item) => {
+                          if (!item.data) return null;
+                          const itemScore = Math.round((item.data.score / item.maxScore) * 100);
+                          const itemColor = getScoreColor(itemScore);
+                          const itemCircumference = 2 * Math.PI * 12;
+                          const itemOffset = itemCircumference - (itemScore / 100) * itemCircumference;
+                          const expandedSet = expandedSeoItems[selectedPageForReport.id] || new Set();
+                          const isExpanded = expandedSet.has(item.key);
+
+                          const toggleExpanded = () => {
+                            setExpandedSeoItems(prev => {
+                              const pageId = selectedPageForReport.id;
+                              const currentSet = prev[pageId] || new Set();
+                              const newSet = new Set(currentSet);
+                              if (isExpanded) {
+                                newSet.delete(item.key);
+                              } else {
+                                newSet.add(item.key);
+                              }
+                              return { ...prev, [pageId]: newSet };
+                            });
+                          };
+
+                          return (
+                            <div
+                              key={item.key}
+                              className={`border rounded-lg ${itemColor.border} ${itemColor.bgLight} transition-colors`}
+                            >
+                              <button
+                                onClick={toggleExpanded}
+                                className="w-full px-4 py-3 flex items-center justify-between hover:bg-opacity-50 transition-colors"
+                              >
+                                <div className="flex items-center gap-3 flex-1">
+                                  <div className="relative w-8 h-8 flex-shrink-0">
+                                    <svg className="transform -rotate-90 w-8 h-8">
+                                      <circle
+                                        cx="16"
+                                        cy="16"
+                                        r="12"
+                                        stroke="currentColor"
+                                        strokeWidth="3"
+                                        fill="none"
+                                        className="text-gray-200"
+                                      />
+                                      <circle
+                                        cx="16"
+                                        cy="16"
+                                        r="12"
+                                        stroke="currentColor"
+                                        strokeWidth="3"
+                                        fill="none"
+                                        strokeDasharray={itemCircumference}
+                                        strokeDashoffset={itemOffset}
+                                        strokeLinecap="round"
+                                        className={itemColor.bg}
+                                      />
+                                    </svg>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <span className={`text-xs font-bold ${itemColor.text}`}>
+                                        {itemScore}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <span className="text-sm font-medium text-gray-900">{item.label}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className={`text-xs font-semibold ${itemColor.text}`}>
+                                    {item.data.score}/{item.maxScore}
+                                  </span>
+                                  <svg
+                                    className={`w-5 h-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </div>
+                              </button>
+                              {isExpanded && (
+                                <div className="px-4 pb-4 pt-2 border-t border-gray-200">
+                                  <p className="text-xs text-gray-600 mt-2">{item.data.message}</p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Recommendations */}
+                    {seoScore.recommendations && seoScore.recommendations.length > 0 && (
+                      <div className="border-t border-gray-200 pt-6">
+                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Opportunities</h5>
+                        <ul className="space-y-2">
+                          {seoScore.recommendations.map((rec, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                              <span className="text-orange-500 mt-1">•</span>
+                              <span>{rec}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
           </div>
         )}
       </div>
