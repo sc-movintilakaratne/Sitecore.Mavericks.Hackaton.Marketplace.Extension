@@ -41,9 +41,13 @@ export function SeoAnalysisTab() {
   });
   const [error, setError] = useState<string | null>(null);
 
-  const handleAnalyzePage = (page: Page) => {
-    // TODO: Implement page analysis functionality
-    console.log("Analyzing page:", page);
+  const handleAnalyzePage = async (page: Page) => {
+    console.log(page);
+    const data = await getPageStructure({
+      token: fakeToken,
+      pageId: page.id
+    });
+    console.log(data.html);
   };
 
   const fetchCollections = async () => {
