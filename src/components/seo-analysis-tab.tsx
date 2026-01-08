@@ -6,6 +6,7 @@ import { getCollections } from "../api/sitecore/getCollections";
 import { getSites } from "../api/sitecore/getSites";
 import { getPageStructure } from "../api/sitecore/getPageStructure";
 import { getSeoScore, SeoScoreResponse } from "../api/seo/getSeoScore";
+import { analyzeHeadSeo, HeadSeoScoreResponse } from "../api/seo/getHeadSeoScore";
 import { fakeToken } from "../utils/utilities/token";
 
 interface Collection {
@@ -37,7 +38,10 @@ export function SeoAnalysisTab() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [seoScores, setSeoScores] = useState<Record<string, SeoScoreResponse>>({});
   const [analyzingPages, setAnalyzingPages] = useState<Record<string, boolean>>({});
+  const [analyzingHeadSeo, setAnalyzingHeadSeo] = useState<Record<string, boolean>>({});
   const [selectedPageForReport, setSelectedPageForReport] = useState<Page | null>(null);
+  const [selectedPageForHeadSeo, setSelectedPageForHeadSeo] = useState<Page | null>(null);
+  const [headSeoScores, setHeadSeoScores] = useState<Record<string, HeadSeoScoreResponse>>({});
   const [loading, setLoading] = useState({
     collections: false,
     sites: false,
@@ -81,6 +85,46 @@ export function SeoAnalysisTab() {
     } finally {
       // Clear analyzing state
       setAnalyzingPages((prev) => {
+        const newState = { ...prev };
+        delete newState[page.id];
+        return newState;
+      });
+    }
+  };
+
+  const handleAnalyzeHeadSeo = async (page: Page) => {
+    try {
+      // Set analyzing state
+      setAnalyzingHeadSeo((prev) => ({ ...prev, [page.id]: true }));
+      setError(null);
+
+      // Get page HTML content
+      const pageData = await getPageStructure({
+        token: fakeToken,
+        pageId: page.id
+      });
+
+      if (!pageData?.html) {
+        throw new Error("Failed to retrieve page HTML content");
+      }
+
+      // Analyze head SEO elements
+      const headSeoResults = analyzeHeadSeo(pageData.html);
+
+      // Store the head SEO results
+      setHeadSeoScores((prev) => ({
+        ...prev,
+        [page.id]: headSeoResults,
+      }));
+
+      // Set the page for head SEO report display
+      setSelectedPageForHeadSeo(page);
+    } catch (err) {
+      console.error("Error analyzing head SEO:", err);
+      setError(`Failed to analyze head SEO: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      // Clear analyzing state
+      setAnalyzingHeadSeo((prev) => {
         const newState = { ...prev };
         delete newState[page.id];
         return newState;
@@ -196,6 +240,7 @@ export function SeoAnalysisTab() {
       setPages([]);
       setSearchQuery(""); // Reset search when site changes
       setSelectedPageForReport(null); // Clear report when site changes
+      setSelectedPageForHeadSeo(null); // Clear head SEO report when site changes
       return;
     }
 
@@ -367,20 +412,36 @@ export function SeoAnalysisTab() {
                                   ID: {page.id}
                                 </span>
                               </div>
-                              <button
-                                onClick={() => handleAnalyzePage(page)}
-                                disabled={isAnalyzing}
-                                className="ml-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-                              >
-                                {isAnalyzing ? (
-                                  <>
-                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                                    <span>Analyzing...</span>
-                                  </>
-                                ) : (
-                                  "Analyze page"
-                                )}
-                              </button>
+                              <div className="flex items-center gap-2 ml-4">
+                                <button
+                                  onClick={() => handleAnalyzeHeadSeo(page)}
+                                  disabled={analyzingHeadSeo[page.id]}
+                                  className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                  {analyzingHeadSeo[page.id] ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                      <span>Analyzing...</span>
+                                    </>
+                                  ) : (
+                                    "Analyze Head SEO"
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => handleAnalyzePage(page)}
+                                  disabled={isAnalyzing}
+                                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                  {isAnalyzing ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                      <span>Analyzing...</span>
+                                    </>
+                                  ) : (
+                                    "Analyze Full Page"
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           </li>
                         );
@@ -390,6 +451,74 @@ export function SeoAnalysisTab() {
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {/* Head SEO Report Section */}
+        {selectedPageForHeadSeo && headSeoScores[selectedPageForHeadSeo.id] && (
+          <div className="mt-6 border border-gray-200 rounded-lg p-6 bg-white">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-gray-800">Head SEO Report</h4>
+              <button
+                onClick={() => setSelectedPageForHeadSeo(null)}
+                className="text-gray-500 hover:text-gray-700 text-sm"
+              >
+                Close
+              </button>
+            </div>
+            
+            <div className="mb-4 pb-4 border-b border-gray-200">
+              <p className="text-sm text-gray-600 mb-2">
+                <span className="font-medium">Page:</span> {selectedPageForHeadSeo.path || selectedPageForHeadSeo.id}
+              </p>
+              <p className="text-xs text-gray-500">
+                <span className="font-medium">ID:</span> {selectedPageForHeadSeo.id}
+              </p>
+            </div>
+
+            {(() => {
+              const headSeo = headSeoScores[selectedPageForHeadSeo.id];
+              const getScoreColor = (score: number) => {
+                if (score === 100) return "text-green-600 bg-green-50 border-green-200";
+                if (score >= 50) return "text-yellow-600 bg-yellow-50 border-yellow-200";
+                return "text-red-600 bg-red-50 border-red-200";
+              };
+
+              const headSeoItems = [
+                { key: 'title', label: 'Title', data: headSeo.title },
+                { key: 'metaDescription', label: 'Meta Description', data: headSeo.metaDescription },
+                { key: 'metaKeywords', label: 'Meta Keywords', data: headSeo.metaKeywords },
+                { key: 'ogTitle', label: 'OG Title', data: headSeo.ogTitle },
+                { key: 'ogDescription', label: 'OG Description', data: headSeo.ogDescription },
+                { key: 'ogImage', label: 'OG Image', data: headSeo.ogImage },
+                { key: 'ogUrl', label: 'OG URL', data: headSeo.ogUrl },
+              ];
+
+              return (
+                <div className="space-y-3">
+                  {headSeoItems.map((item) => (
+                    <div
+                      key={item.key}
+                      className={`p-4 rounded-lg border ${getScoreColor(item.data.score)}`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <span className="text-sm font-semibold text-gray-800">{item.label}</span>
+                        <span className={`px-3 py-1 rounded text-xs font-bold ${getScoreColor(item.data.score)}`}>
+                          {item.data.score}/100
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-700 mb-2">{item.data.message}</p>
+                      {item.data.value && (
+                        <div className="mt-2 p-2 bg-white bg-opacity-50 rounded border border-gray-200">
+                          <p className="text-xs font-medium text-gray-600 mb-1">Value:</p>
+                          <p className="text-xs text-gray-800 break-words">{item.data.value}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
 
