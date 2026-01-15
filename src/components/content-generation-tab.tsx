@@ -37,53 +37,53 @@ export default function ContentGenerationTab() {
   const [description, setDescription] = useState("");
 
   //real handle generate function
-  // const handleGenerate = async () => {
-  //   if (!description) return alert("Please enter a description");
-
-  //   setLoading(true);
-  //   setGeneratedImage(null);
-  //   setAssetId(null);
-
-  //   try {
-  //     const res = await fetch("/api/generate-asset", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({
-  //         brandName, // We still send the Name to the AI for context
-  //         productDescription: description,
-  //       }),
-  //     });
-
-  //     const data = (await res.json()) as ApiResponse;
-
-  //     if (!data.success) throw new Error(data.error || "Generation failed");
-
-  //     setGeneratedImage(data.imagePreview!);
-  //     setAssetId(data.assetId!);
-  //   } catch (error: any) {
-  //     console.error(error);
-  //     alert(`Error: ${error.message}`);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const handleGenerate = async () => {
-    if (!description)
-      return alert("Please enter a description (even for mock)");
+    if (!description) return alert("Please enter a description");
 
     setLoading(true);
+    setGeneratedImage(null);
+    setAssetId(null);
 
-    // Simulate a short delay like a real AI
-    setTimeout(() => {
-      const mockImage =
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
+    try {
+      const res = await fetch("/api/generate-asset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brandName, // We still send the Name to the AI for context
+          productDescription: description,
+        }),
+      });
 
-      setGeneratedImage(mockImage);
-      setAssetId("mock-asset-id-" + Date.now());
+      const data = (await res.json()) as ApiResponse;
+
+      if (!data.success) throw new Error(data.error || "Generation failed");
+
+      setGeneratedImage(data.imagePreview!);
+      setAssetId(data.assetId!);
+    } catch (error: any) {
+      console.error(error);
+      alert(`Error: ${error.message}`);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
+
+  // const handleGenerate = async () => {
+  //   if (!description)
+  //     return alert("Please enter a description (even for mock)");
+
+  //   setLoading(true);
+
+  //   // Simulate a short delay like a real AI
+  //   setTimeout(() => {
+  //     const mockImage =
+  //       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
+
+  //     setGeneratedImage(mockImage);
+  //     setAssetId("mock-asset-id-" + Date.now());
+  //     setLoading(false);
+  //   }, 1000);
+  // };
 
   // ---------------------------------------------------------------------------
   // 2. THE UPLOAD FUNCTION
@@ -155,56 +155,89 @@ export default function ContentGenerationTab() {
       {/* VIEW 1: SUCCESS STATE (Image Generated) */}
       {generatedImage ? (
         <div className="flex-1 flex flex-col p-6 animate-in fade-in slide-in-from-bottom-8 duration-500 overflow-y-auto">
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="bg-green-100 p-2 rounded-full text-green-600 shrink-0">
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900">
-                  Asset Ready for Upload
-                </h3>
-                <p className="text-sm text-gray-500">
-                  Review the asset above. It will be tagged with{" "}
-                  <strong>{brandName}</strong> (ID: {selectedBrandId}).
-                </p>
-                <div className="w-full relative rounded-2xl overflow-hidden shadow-2xl border border-gray-100 mb-6 group mt-3">
-                  <img
-                    src={generatedImage}
-                    alt="AI Result"
-                    className="w-full h-auto object-cover max-h-[400px]"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                    <span className="text-white text-xs font-mono bg-black/50 px-2 py-1 rounded">
-                      Generated by Opticore AI
-                    </span>
+          <div className="relative group w-full max-w-2xl mx-auto rounded-2xl overflow-hidden shadow-2xl  ">
+            {/* --- IMAGE AREA --- */}
+            <div className="relative aspect-square md:aspect-[4/3] w-full">
+              <img
+                src={generatedImage}
+                alt="AI Result"
+                className="w-full h-full object-cover"
+              />
+
+              {/* --- TOP OVERLAY (Text & Close Button) --- */}
+              {/* Gradient background ensures text is readable on any image */}
+              <div className="absolute inset-x-0 top-0 p-5 bg-gradient-to-b  flex justify-between items-start">
+                {/* Text Content */}
+                <div className="text-white space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-green-500/20 backdrop-blur-md border border-green-500/30 p-1.5 rounded-full text-green-400">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    </div>
+                    <h3 className="font-bold text-lg tracking-tight">
+                      Asset Ready
+                    </h3>
                   </div>
+                  <p className="text-sm text-gray-200 pl-9 opacity-90">
+                    Tagged for{" "}
+                    <strong className="text-white">{brandName}</strong> (ID:{" "}
+                    {selectedBrandId})
+                  </p>
                 </div>
+
+                {/*  (Discard) Button */}
+                <button
+                  onClick={handleReset}
+                  disabled={isUploading}
+                  className="bg-white/10 hover:bg-red-500/20 backdrop-blur-md border border-white/10 text-gray-600 rounded-full p-2 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                  title="Discard & Reset"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {/* --- BOTTOM OVERLAY (AI Badge) --- */}
+              <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-white/60 bg-black/40 backdrop-blur-sm px-2 py-1 rounded border border-white/10">
+                  Generated by Opticore AI
+                </span>
               </div>
             </div>
 
-            <div className="flex gap-3 pt-2">
+            {/* --- ACTION BAR (Bottom) --- */}
+            <div className="p-4 bg-white border-t border-gray-100">
               <button
                 onClick={handleUploadToContentHub}
-                disabled={isUploading} // Disable button while uploading
-                className={`flex-1 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2
-                  ${
-                    isUploading
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-gradient-to-tr from-violet-600 to-indigo-600 hover:shadow-md"
-                  }`}
+                disabled={isUploading}
+                className={`w-full text-white font-semibold py-3.5 px-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 transform active:scale-[0.99]
+          ${
+            isUploading
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 hover:shadow-indigo-500/25"
+          }`}
               >
                 {isUploading ? (
                   <>
@@ -228,12 +261,12 @@ export default function ContentGenerationTab() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    Uploading...
+                    Uploading Asset...
                   </>
                 ) : (
                   <>
                     <svg
-                      className="w-4 h-4"
+                      className="w-5 h-5"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -248,14 +281,6 @@ export default function ContentGenerationTab() {
                     Upload to Content Hub
                   </>
                 )}
-              </button>
-
-              <button
-                onClick={handleReset}
-                disabled={isUploading}
-                className="px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                Discard
               </button>
             </div>
           </div>
