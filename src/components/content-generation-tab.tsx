@@ -402,8 +402,8 @@ export default function ContentGenerationTab() {
                   }}
                   disabled={loading}
                 >
-                  {BRAND_OPTIONS.map((brand) => (
-                    <option key={brand.id} value={brand.id}>
+                  {BRAND_OPTIONS.map((brand, index) => (
+                    <option key={brand.id + index} value={brand.id}>
                       {brand.name}
                     </option>
                   ))}
@@ -515,8 +515,8 @@ export default function ContentGenerationTab() {
           <div
             className={`pointer-events-auto max-w-xl w-full px-5 py-4 flex items-center justify-between rounded-xl shadow-2xl border ${
               toast.type === "error"
-                ? "bg-red-100 border-red-300 text-red-900" 
-                : "bg-blue-100 border-green-300 text-green-900" 
+                ? "bg-red-100 border-red-300 text-red-900"
+                : "bg-blue-100 border-green-300 text-green-900"
             } backdrop-blur-md`}
           >
             <div className="flex items-center gap-3">
