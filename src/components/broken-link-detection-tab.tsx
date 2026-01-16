@@ -130,6 +130,13 @@ export default function BrokenLinkDetectionTab({
         {/* Results */}
         {results && (
           <div className="space-y-6">
+            <button
+              onClick={auditContent}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold shadow-md hover:shadow-lg transition-all"
+            >
+              <Search className="h-5 w-5" />
+              Start Audit
+            </button>
             {/* Stats Bar */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -364,13 +371,6 @@ export default function BrokenLinkDetectionTab({
           </div>
         )}
       </main>
-      <button
-        onClick={auditContent}
-        className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold shadow-md hover:shadow-lg transition-all"
-      >
-        <Search className="h-5 w-5" />
-        Start Audit
-      </button>
     </div>
   );
 }
