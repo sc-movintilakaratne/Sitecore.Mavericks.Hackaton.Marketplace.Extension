@@ -106,7 +106,7 @@ export default function ContentGenerationTab() {
         body: JSON.stringify({
           imageBase64: generatedImage,
           brandId: selectedBrandId,
-          fileName: `ai-gen-${Date.now()}.png`,
+          fileName: `opticore-ai-gen-${Date.now()}.png`,
         }),
       });
 
@@ -155,7 +155,7 @@ export default function ContentGenerationTab() {
 
       showToast(
         "If download didn't start, Please Right-Click the image and select 'Save Image As'",
-        "info"
+        "error"
       );
     } catch (error) {
       console.warn("Download blocked by iframe:", error);
@@ -516,7 +516,7 @@ export default function ContentGenerationTab() {
             className={`pointer-events-auto max-w-xl w-full px-5 py-4 flex items-center justify-between rounded-xl shadow-2xl border ${
               toast.type === "error"
                 ? "bg-red-100 border-red-300 text-red-900"
-                : "bg-blue-100 border-green-300 text-green-900"
+                : "bg-green-100 border-green-300 text-green-900"
             } backdrop-blur-md`}
           >
             <div className="flex items-center gap-3">
