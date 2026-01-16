@@ -17,9 +17,10 @@ import {
   AlertCircle,
   AlertTriangle,
   Circle,
+  FileText,
 } from "lucide-react";
 import { getPageStructure } from "../api/sitecore/getPageStructure";
-import { getSeoScore, SeoScoreResponse } from "../api/seo/getSeoScore";
+import { analyzeHeadSeo, HeadSeoScoreResponse } from "../api/seo/getHeadSeoScore";
 import { fakeToken } from "../utils/utilities/token";
 
 interface SeoMetric {
@@ -110,7 +111,7 @@ export function SeoAnalysisTab({
   client: ClientSDK | null;
 }) {
   const [loading, setLoading] = useState(false);
-  const [seoResult, setSeoResult] = useState<SeoScoreResponse | null>(null);
+  const [seoResult, setSeoResult] = useState<HeadSeoScoreResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   console.log(pageInfo?.pageInfo?.id);
@@ -138,13 +139,10 @@ export function SeoAnalysisTab({
         throw new Error("Failed to retrieve page HTML content");
       }
 
-      // Analyze SEO using the HTML content
-      const seoScore = await getSeoScore({
-        html: pageData.html,
-        url: pageInfo.pageInfo.path,
-      });
+      // Analyze Head SEO using the HTML content
+      const headSeoScore = analyzeHeadSeo(pageData.html);
 
-      setSeoResult(seoScore);
+      setSeoResult(headSeoScore);
     } catch (err) {
       console.error("Error analyzing SEO:", err);
       setError(
@@ -155,26 +153,26 @@ export function SeoAnalysisTab({
     }
   };
 
-  // Convert SEO details to metrics with status
+  // Convert Head SEO results to metrics with status
   const getMetrics = (): SeoMetric[] => {
-    if (!seoResult?.details) return [];
+    if (!seoResult) return [];
 
-    const details = seoResult.details;
     const metrics: SeoMetric[] = [];
 
     const metricConfigs = [
-      { key: "title", label: "Title Tag", maxScore: 15 },
-      { key: "metaDescription", label: "Meta Description", maxScore: 15 },
-      { key: "headings", label: "Headings", maxScore: 20 },
-      { key: "images", label: "Images", maxScore: 15 },
-      { key: "links", label: "Links", maxScore: 10 },
-      { key: "content", label: "Content", maxScore: 15 },
+      { key: "title", label: "Title Tag", maxScore: 100 },
+      { key: "metaDescription", label: "Meta Description", maxScore: 100 },
+      { key: "metaKeywords", label: "Meta Keywords", maxScore: 100 },
+      { key: "ogTitle", label: "OG Title", maxScore: 100 },
+      { key: "ogDescription", label: "OG Description", maxScore: 100 },
+      { key: "ogImage", label: "OG Image", maxScore: 100 },
+      { key: "ogUrl", label: "OG URL", maxScore: 100 },
     ];
 
     metricConfigs.forEach((config) => {
-      const detail = details[config.key as keyof typeof details];
-      if (detail) {
-        const percentage = (detail.score / config.maxScore) * 100;
+      const element = seoResult[config.key as keyof HeadSeoScoreResponse];
+      if (element) {
+        const percentage = element.score;
         let status: "PASS" | "WARNING" | "FAIL";
         if (percentage >= 80) {
           status = "PASS";
@@ -187,9 +185,9 @@ export function SeoAnalysisTab({
         metrics.push({
           key: config.key,
           label: config.label,
-          score: detail.score,
+          score: element.score,
           maxScore: config.maxScore,
-          message: detail.message || "",
+          message: element.message || "",
           status,
         });
       }
@@ -198,10 +196,60 @@ export function SeoAnalysisTab({
     return metrics;
   };
 
+  // Calculate overall score from head SEO elements
+  const calculateOverallScore = (): number => {
+    if (!seoResult) return 0;
+    
+    const scores = [
+      seoResult.title.score,
+      seoResult.metaDescription.score,
+      seoResult.metaKeywords.score,
+      seoResult.ogTitle.score,
+      seoResult.ogDescription.score,
+      seoResult.ogImage.score,
+      seoResult.ogUrl.score,
+    ];
+    
+    return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  };
+
+  // Generate recommendations based on head SEO results
+  const getRecommendations = (): string[] => {
+    if (!seoResult) return [];
+    
+    const recommendations: string[] = [];
+    
+    if (seoResult.title.score < 100) {
+      recommendations.push(seoResult.title.message);
+    }
+    if (seoResult.metaDescription.score < 100) {
+      recommendations.push(seoResult.metaDescription.message);
+    }
+    if (seoResult.metaKeywords.score < 100) {
+      recommendations.push(seoResult.metaKeywords.message);
+    }
+    if (seoResult.ogTitle.score < 100) {
+      recommendations.push(seoResult.ogTitle.message);
+    }
+    if (seoResult.ogDescription.score < 100) {
+      recommendations.push(seoResult.ogDescription.message);
+    }
+    if (seoResult.ogImage.score < 100) {
+      recommendations.push(seoResult.ogImage.message);
+    }
+    if (seoResult.ogUrl.score < 100) {
+      recommendations.push(seoResult.ogUrl.message);
+    }
+    
+    return recommendations;
+  };
+
   const metrics = getMetrics();
+  const overallScore = calculateOverallScore();
+  const recommendations = getRecommendations();
   const chartData = metrics.map((metric) => ({
     name: metric.label,
-    value: Math.round((metric.score / metric.maxScore) * 100),
+    value: metric.score,
   }));
 
   const COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
@@ -287,6 +335,54 @@ export function SeoAnalysisTab({
 
           {seoResult && !loading && (
             <div className="space-y-6">
+              {/* Page Details Section */}
+              {pageInfo?.pageInfo && (
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <h3 className="text-lg font-black text-slate-900 tracking-tight">
+                      Page Details
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                        Page Name
+                      </p>
+                      <p className="text-sm font-bold text-slate-800">
+                        {pageInfo.pageInfo.name || "N/A"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                        Page ID
+                      </p>
+                      <p className="text-sm font-mono text-slate-600 break-all">
+                        {pageInfo.pageInfo.id || "N/A"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                        Path
+                      </p>
+                      <p className="text-sm font-medium text-slate-700 break-all">
+                        {pageInfo.pageInfo.path || "N/A"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                        Language
+                      </p>
+                      <p className="text-sm font-bold text-slate-800">
+                        {pageInfo.pageInfo.language || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                 {/* Score Widget */}
                 <div className="md:col-span-4 bg-white p-8 rounded-3xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center relative overflow-hidden">
@@ -308,11 +404,11 @@ export function SeoAnalysisTab({
                         cy="64"
                         r="56"
                         fill="transparent"
-                        stroke={getScoreColor(seoResult.score)}
+                        stroke={getScoreColor(overallScore)}
                         strokeWidth="12"
                         strokeDasharray={351.8}
                         strokeDashoffset={
-                          351.8 - (351.8 * seoResult.score) / 100
+                          351.8 - (351.8 * overallScore) / 100
                         }
                         strokeLinecap="round"
                         className="transition-all duration-1000 ease-out"
@@ -320,13 +416,8 @@ export function SeoAnalysisTab({
                     </svg>
                     <div className="text-center">
                       <span className="text-4xl font-black text-slate-800 tracking-tighter">
-                        {seoResult.score}%
+                        {overallScore}%
                       </span>
-                      {seoResult.grade && (
-                        <div className="text-lg font-bold text-slate-600 mt-1">
-                          Grade: {seoResult.grade}
-                        </div>
-                      )}
                     </div>
                   </div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
@@ -383,7 +474,7 @@ export function SeoAnalysisTab({
               </div>
 
               {/* Summary Card */}
-              {seoResult.recommendations && seoResult.recommendations.length > 0 && (
+              {recommendations.length > 0 && (
                 <div className="bg-indigo-600 p-8 rounded-[2rem] shadow-2xl shadow-indigo-200 text-white relative overflow-hidden">
                   <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
                   <div className="flex items-center gap-3 mb-4">
@@ -395,7 +486,7 @@ export function SeoAnalysisTab({
                     </h3>
                   </div>
                   <ul className="space-y-2">
-                    {seoResult.recommendations.map((rec, idx) => (
+                    {recommendations.map((rec, idx) => (
                       <li key={idx} className="text-base font-medium leading-relaxed flex items-start gap-2">
                         <span className="text-indigo-200 mt-1">•</span>
                         <span>{rec}</span>
