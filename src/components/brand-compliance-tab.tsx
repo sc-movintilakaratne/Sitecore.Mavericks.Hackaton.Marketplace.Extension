@@ -18,10 +18,13 @@ import {
   CheckCircle,
   AlertTriangle,
 } from "lucide-react";
-import { BrandGuidelines } from "../app/api/analyze-brand/route";
+
 import { getPageStructure } from "../api/sitecore/getPageStructure";
 import { fakeToken } from "../utils/utilities/token";
-import { analyzeBrandCompliance } from "../lib/brand-governance";
+import {
+  analyzeBrandCompliance,
+  BrandGuidelines,
+} from "../lib/brand-governance";
 import { ClientSDK, PagesContext } from "@sitecore-marketplace-sdk/client";
 
 interface Issue {
