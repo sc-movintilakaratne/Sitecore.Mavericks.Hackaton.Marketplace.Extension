@@ -22,6 +22,7 @@ import {
 import { getPageStructure } from "../api/sitecore/getPageStructure";
 import { analyzeHeadSeo, HeadSeoScoreResponse } from "../api/seo/getHeadSeoScore";
 import { fakeToken } from "../utils/utilities/token";
+import { GoogleGenAI } from "@google/genai";
 
 interface SeoMetric {
   key: string;
@@ -313,41 +314,106 @@ export function SeoAnalysisTab({
     return recommendations;
   };
 
-  // Function to call external AI API for suggestions
+  // Function to call Google AI for SEO suggestions
   const callExternalAI = async (
     fieldKey: string,
     fieldLabel: string,
     currentValue: string,
     message: string
   ): Promise<string> => {
-    // TODO: Replace with actual external AI API call
-    // This is a placeholder function structure
-    
-    const apiUrl = process.env.NEXT_PUBLIC_AI_API_URL || "https://api.example.com/ai/suggest";
-    
-    // Example API call structure (commented out - implement when ready)
-    /*
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.NEXT_PUBLIC_AI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        fieldType: fieldKey,
-        fieldLabel: fieldLabel,
-        currentValue: currentValue,
-        issue: message,
-        context: "SEO optimization",
-      }),
-    });
-    
-    const data = await response.json();
-    return data.suggestion || data.text || "";
-    */
-    
-    // Placeholder: Return a mock suggestion
-    return `AI-generated suggestion for ${fieldLabel} based on: ${message}`;
+    try {
+      const ai = new GoogleGenAI({
+        apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY || "",
+      });
+
+      // Build context-aware prompt based on field type
+      let prompt = `You are an SEO expert. Generate an optimized ${fieldLabel} for a webpage.
+
+Current Issue: ${message}
+${currentValue ? `Current Value: ${currentValue}` : "No current value exists"}
+
+Field Type: ${fieldKey}
+Field Label: ${fieldLabel}
+
+Requirements:`;
+
+      // Add specific requirements based on field type
+      switch (fieldKey) {
+        case "title":
+          prompt += `
+- Must be 50-60 characters long
+- Include primary keyword naturally
+- Be compelling and click-worthy
+- Accurately describe the page content`;
+          break;
+        case "metaDescription":
+          prompt += `
+- Must be 150-160 characters long
+- Include primary keyword and call-to-action
+- Be compelling and encourage clicks
+- Summarize the page content accurately`;
+          break;
+        case "metaKeywords":
+          prompt += `
+- Provide 5-10 relevant keywords separated by commas
+- Include primary and secondary keywords
+- Use natural keyword variations`;
+          break;
+        case "ogTitle":
+          prompt += `
+- Must be 60 characters or less
+- Optimized for social media sharing
+- Engaging and shareable`;
+          break;
+        case "ogDescription":
+          prompt += `
+- Must be 200 characters or less
+- Compelling social media preview text
+- Encourages engagement and sharing`;
+          break;
+        case "ogImage":
+          prompt += `
+- Provide a relevant image URL or description
+- Image should be 1200x630 pixels (recommended)
+- Should represent the page content visually`;
+          break;
+        case "ogUrl":
+          prompt += `
+- Provide the canonical URL for this page
+- Should be the full absolute URL
+- Must be the primary URL for this content`;
+          break;
+        default:
+          prompt += `
+- Optimize for SEO best practices
+- Be relevant and accurate`;
+      }
+
+      prompt += `
+
+Generate only the optimized ${fieldLabel} value. Do not include explanations or additional text.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: prompt,
+        config: {
+          temperature: 0.7,
+          maxOutputTokens: 200,
+        },
+      });
+
+      const suggestion = response.text?.trim() || "";
+      
+      if (!suggestion) {
+        throw new Error("AI did not generate a suggestion");
+      }
+
+      return suggestion;
+    } catch (error) {
+      console.error("Error calling Google AI:", error);
+      // Fallback to a basic suggestion if AI fails
+      return `Optimized ${fieldLabel} based on SEO best practices. ${message}`;
+    }
   };
 
   const handleFieldChange = (fieldKey: string, value: string) => {
