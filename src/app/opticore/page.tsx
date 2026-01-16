@@ -58,7 +58,7 @@ function PagesContextPanel() {
       {true ? (
         <div className="mt-8">
           <Tabs defaultValue="seo">
-            <TabsList className="mx-auto mb-3 overflow-x-auto max-w-full justify-start">
+            <TabsList className="grid w-full grid-cols-2 h-auto mb-4 md:inline-flex md:w-auto md:h-9 mx-auto">
               <TabsTrigger value="seo">SEO Analysis</TabsTrigger>
               <TabsTrigger value="links">Broken Link Detection</TabsTrigger>
               <TabsTrigger value="compliance">Brand Compliance</TabsTrigger>
