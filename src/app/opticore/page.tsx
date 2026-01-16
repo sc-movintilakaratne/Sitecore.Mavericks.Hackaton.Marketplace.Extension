@@ -65,7 +65,7 @@ function PagesContextPanel() {
               <TabsTrigger value="generation">Content Generation</TabsTrigger>
             </TabsList>
             <TabsContent value="seo">
-              <SeoAnalysisTab />
+              <SeoAnalysisTab client={client} pagesContext={pagesContext} appContext={appContext} />
             </TabsContent>
             <TabsContent value="links">
               <BrokenLinkDetectionTab />
