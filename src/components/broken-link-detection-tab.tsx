@@ -8,7 +8,7 @@ import {
   Link2,
 } from "lucide-react";
 import { ClientSDK, PagesContext } from "@sitecore-marketplace-sdk/client";
-import { fakeToken } from "../utils/utilities/token";
+import { secretApiToken } from "../utils/utilities/token";
 import { getPageStructure } from "../api/sitecore/getPageStructure";
 import { validateHtmlContent } from "../lib/check-broken-links";
 
@@ -58,7 +58,7 @@ export default function BrokenLinkDetectionTab({
 
     try {
       const pageData = await getPageStructure({
-        token: fakeToken,
+        token: secretApiToken,
         pageId: pageInfo?.pageInfo?.id || "",
       });
 

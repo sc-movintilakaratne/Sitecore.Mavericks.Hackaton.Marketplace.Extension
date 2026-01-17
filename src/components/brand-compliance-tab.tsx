@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 import { getPageStructure } from "../api/sitecore/getPageStructure";
-import { fakeToken } from "../utils/utilities/token";
+import { secretApiToken } from "../utils/utilities/token";
 import {
   analyzeBrandCompliance,
   BrandGuidelines,
@@ -185,7 +185,7 @@ philosophy: illuminating everyday living through design that is both functional 
     setAuditResult(null);
 
     const pageData = await getPageStructure({
-      token: fakeToken,
+      token: secretApiToken,
       pageId: pageInfo?.pageInfo?.id || "",
     });
 

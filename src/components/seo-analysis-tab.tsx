@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { getPageStructure } from "../api/sitecore/getPageStructure";
 import { analyzeHeadSeo, HeadSeoScoreResponse } from "../api/seo/getHeadSeoScore";
-import { fakeToken } from "../utils/utilities/token";
+import { secretApiToken } from "../utils/utilities/token";
 import { GoogleGenAI } from "@google/genai";
 
 interface SeoMetric {
@@ -199,7 +199,7 @@ export function SeoAnalysisTab({
     try {
       // Get page HTML content from Sitecore
       const pageData = await getPageStructure({
-        token: fakeToken,
+        token: secretApiToken,
         pageId: pageInfo?.pageInfo?.id,
       });
 
